@@ -1,0 +1,228 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>EduMate AI | Sri Lankan Study Assistant</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600&display=swap" rel="stylesheet">
+    <style>
+        /* CSS STYLES */
+        :root {
+            --primary: #2563eb;
+            --bg-gradient: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+            --glass: rgba(255, 255, 255, 0.8);
+        }
+
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Inter', sans-serif; }
+
+        body {
+            background: var(--bg-gradient);
+            height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .app-container {
+            width: 90%;
+            max-width: 1000px;
+            height: 85vh;
+            display: flex;
+            background: var(--glass);
+            backdrop-filter: blur(10px);
+            border-radius: 20px;
+            box-shadow: 0 15px 35px rgba(0,0,0,0.1);
+            overflow: hidden;
+            border: 1px solid rgba(255,255,255,0.3);
+        }
+
+        /* Sidebar Styles */
+        .sidebar {
+            width: 280px;
+            background: rgba(255, 255, 255, 0.5);
+            padding: 30px;
+            display: flex;
+            flex-direction: column;
+            border-right: 1px solid rgba(0,0,0,0.05);
+        }
+
+        .logo h1 { color: var(--primary); font-size: 24px; margin-bottom: 5px; }
+        .logo p { font-size: 12px; color: #666; margin-bottom: 40px; }
+
+        .control-group { margin-bottom: 25px; }
+        .control-group label { display: block; font-size: 13px; font-weight: 600; margin-bottom: 8px; color: #444; }
+        
+        select {
+            width: 100%;
+            padding: 10px;
+            border-radius: 8px;
+            border: 1px solid #ddd;
+            background: white;
+            outline: none;
+        }
+
+        /* Chat Area Styles */
+        .chat-main {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            background: rgba(255, 255, 255, 0.2);
+        }
+
+        #chat-window {
+            flex: 1;
+            padding: 30px;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+
+        .msg { max-width: 80%; padding: 12px 16px; border-radius: 15px; font-size: 14px; line-height: 1.5; }
+        .bot { background: white; align-self: flex-start; border-bottom-left-radius: 2px; box-shadow: 0 2px 5px rgba(0,0,0,0.05); }
+        .user { background: var(--primary); color: white; align-self: flex-end; border-bottom-right-radius: 2px; }
+
+        /* Input Styles */
+        .input-area {
+            padding: 20px 30px;
+            background: white;
+            display: flex;
+            gap: 10px;
+            align-items: center;
+        }
+
+        input[type="text"] {
+            flex: 1;
+            padding: 12px 15px;
+            border: 1px solid #eee;
+            border-radius: 10px;
+            outline: none;
+            background: #f9f9f9;
+        }
+
+        button {
+            background: var(--primary);
+            color: white;
+            border: none;
+            padding: 12px 25px;
+            border-radius: 10px;
+            cursor: pointer;
+            font-weight: 600;
+            transition: opacity 0.2s;
+        }
+
+        button:disabled { opacity: 0.5; cursor: not-allowed; }
+
+        /* Scrollbar */
+        #chat-window::-webkit-scrollbar { width: 5px; }
+        #chat-window::-webkit-scrollbar-thumb { background: #ccc; border-radius: 10px; }
+    </style>
+</head>
+<body>
+
+    <div class="app-container">
+        <aside class="sidebar">
+            <div class="logo">
+                <h1>EduMate AI</h1>
+                <p>Sri Lankan Study Companion</p>
+            </div>
+
+            <div class="control-group">
+                <label>Language Selection</label>
+                <select id="lang-select">
+                    <option value="English">English</option>
+                    <option value="Tamil">Tamil (தமிழ்)</option>
+                    <option value="Sinhala">Sinhala (සිංහල)</option>
+                </select>
+            </div>
+
+            <div class="control-group">
+                <label>Study Level</label>
+                <select id="level-select">
+                    <option value="OL">G.C.E. O/L</option>
+                    <option value="AL">G.C.E. A/L</option>
+                </select>
+            </div>
+            
+            <div style="margin-top: auto; font-size: 11px; color: #888;">
+                Powered by OpenAI & ChromaDB
+            </div>
+        </aside>
+
+        <main class="chat-main">
+            <div id="chat-window">
+                <div class="msg bot">
+                    Hello! I'm your <b>EduMate</b> AI tutor. Choose your language and ask me any Science question from your textbooks.
+                </div>
+            </div>
+
+            <div class="input-area">
+                <input type="text" id="user-input" placeholder="Type your question here..." onkeypress="handleKey(event)">
+                <button onclick="askAI()" id="send-btn">Ask AI</button>
+            </div>
+        </main>
+    </div>
+
+    <script>
+        /* JAVASCRIPT LOGIC */
+        const chatWindow = document.getElementById('chat-window');
+        const userInput = document.getElementById('user-input');
+        const langSelect = document.getElementById('lang-select');
+        const sendBtn = document.getElementById('send-btn');
+
+        async function askAI() {
+            const text = userInput.value.trim();
+            const lang = langSelect.value;
+
+            if (!text) return;
+
+            // 1. Add User Message to UI
+            addMessage(text, 'user');
+            userInput.value = '';
+            
+            // 2. Loading state
+            sendBtn.disabled = true;
+            sendBtn.innerText = "Processing...";
+            const loadingMsg = addMessage("Thinking in " + lang + "...", 'bot');
+
+            try {
+                // 3. Call your FastAPI Backend
+                const response = await fetch('http://127.0.0.1:8000/ask', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ 
+                        text: text,
+                        lang: lang 
+                    })
+                });
+
+                const data = await response.json();
+                
+                // 4. Update with AI Answer
+                loadingMsg.innerHTML = data.answer;
+                
+            } catch (error) {
+                loadingMsg.innerText = "Error: Could not connect to the backend. Ensure app.py is running.";
+                console.error(error);
+            } finally {
+                sendBtn.disabled = false;
+                sendBtn.innerText = "Ask AI";
+                chatWindow.scrollTop = chatWindow.scrollHeight;
+            }
+        }
+
+        function addMessage(text, sender) {
+            const div = document.createElement('div');
+            div.className = `msg ${sender}`;
+            div.innerHTML = text;
+            chatWindow.appendChild(div);
+            chatWindow.scrollTop = chatWindow.scrollHeight;
+            return div; // Return element so we can update it later
+        }
+
+        function handleKey(e) {
+            if (e.key === 'Enter') askAI();
+        }
+    </script>
+</body>
+</html>
