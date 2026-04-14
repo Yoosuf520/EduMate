@@ -36,8 +36,6 @@ Offline Edge Deployment: Researching the use of Ollama or LlamaCpp to run the en
 
 Teacher Analytics: A dashboard for educators to visualize "Knowledge Gaps" based on the most frequent student queries.
 
-🔧 Installation & Setup
-Clone the repo: git clone https://github.com/YoosufAhamed/EduMate.git
 
 Install OCR Engines: Install Tesseract OCR and Poppler.
 
